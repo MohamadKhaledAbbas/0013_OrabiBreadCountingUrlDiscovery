@@ -10,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -33,15 +32,15 @@ import orabibreadcountingurldiscovery.composeapp.generated.resources.Res
 import orabibreadcountingurldiscovery.composeapp.generated.resources.orabi_logo
 
 // ──────────────────────────────────────────────────────────────
-// Brand palette
+// Brand palette – Ocean Blue
 // ──────────────────────────────────────────────────────────────
-private val OrabiDarkBrown = Color(0xFF5A4A2C)
-private val OrabiGold = Color(0xFFD4AF37)
-private val OrabiCream = Color(0xFFF5EDDC)
-private val OrabiSuccessGreen = Color(0xFF388E3C)
+private val OrabiDarkBlue = Color(0xFF0D253F)
+private val OrabiBlue = Color(0xFF1976D2)
+private val OrabiLightBg = Color(0xFFF0F4FA)
+private val OrabiSuccessGreen = Color(0xFF2E7D32)
 private val OrabiErrorRed = Color(0xFFC62828)
 private val OrabiWarnOrange = Color(0xFFE65100)
-private val OrabiLightGold = Color(0xFFF5E6B8)
+private val OrabiLightBlue = Color(0xFFBBDEFB)
 
 // ──────────────────────────────────────────────────────────────
 // All three discovery phases – used by the stepper
@@ -74,7 +73,7 @@ fun DiscoveryScreen(
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = OrabiCream,
+            color = OrabiLightBg,
         ) {
             Column(
                 modifier = Modifier
@@ -88,21 +87,21 @@ fun DiscoveryScreen(
                 // ── Logo + title ────────────────────────
                 Image(
                     painter = painterResource(Res.drawable.orabi_logo),
-                    contentDescription = "شعار عربي",
+                    contentDescription = "شعار عرابي",
                     modifier = Modifier.size(120.dp),
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "عدّاد الخبز عربي",
+                    text = "إحصاء الخبز",
                     style = MaterialTheme.typography.headlineSmall
                         .copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp),
-                    color = OrabiDarkBrown,
+                    color = OrabiDarkBlue,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "الاتصال بلوحة العدّ",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OrabiDarkBrown.copy(alpha = 0.55f),
+                    color = OrabiDarkBlue.copy(alpha = 0.55f),
                 )
                 Spacer(Modifier.height(28.dp))
 
@@ -132,9 +131,9 @@ fun DiscoveryScreen(
 
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    text = "عربي لعدّ الخبز الآلي © ٢٠٢٦",
+                    text = "منظومة إحصاءالخبز © ٢٠٢٦",
                     style = MaterialTheme.typography.labelSmall,
-                    color = OrabiDarkBrown.copy(alpha = 0.3f),
+                    color = OrabiDarkBlue.copy(alpha = 0.3f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -153,21 +152,21 @@ private fun IdleContent() {
         Spacer(Modifier.height(8.dp))
         CircularProgressIndicator(
             modifier = Modifier.size(40.dp),
-            color = OrabiGold,
+            color = OrabiBlue,
             strokeWidth = 3.dp,
         )
         Spacer(Modifier.height(20.dp))
         Text(
             "جارٍ التحضير للاتصال…",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = OrabiDarkBrown,
+            color = OrabiDarkBlue,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
         Text(
             "يتم تجهيز النظام للبحث عن لوحة العدّ",
             style = MaterialTheme.typography.bodySmall,
-            color = OrabiDarkBrown.copy(alpha = 0.5f),
+            color = OrabiDarkBlue.copy(alpha = 0.5f),
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
@@ -187,14 +186,14 @@ private fun DiscoveringContent(state: DiscoveryState.Discovering) {
         Text(
             "جارٍ البحث عن لوحة العدّ",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = OrabiDarkBrown,
+            color = OrabiDarkBlue,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(2.dp))
         Text(
             "يرجى الانتظار بينما نحاول الاتصال بالجهاز",
             style = MaterialTheme.typography.bodySmall,
-            color = OrabiDarkBrown.copy(alpha = 0.45f),
+            color = OrabiDarkBlue.copy(alpha = 0.45f),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(20.dp))
@@ -272,7 +271,7 @@ private fun ConnectedContent(
             .height(54.dp)
             .shadow(6.dp, RoundedCornerShape(14.dp)),
         shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = OrabiGold),
+        colors = ButtonDefaults.buttonColors(containerColor = OrabiBlue),
     ) {
         Text(
             "فتح لوحة العدّ",
@@ -291,7 +290,7 @@ private fun ConnectedContent(
         shape = RoundedCornerShape(14.dp),
         border = ButtonDefaults.outlinedButtonBorder(enabled = true),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = OrabiDarkBrown,
+            contentColor = OrabiDarkBlue,
         ),
     ) {
         Text(
@@ -354,7 +353,7 @@ private fun FailureContent(
         Text(
             "نتائج محاولات الاتصال:",
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = OrabiDarkBrown,
+            color = OrabiDarkBlue,
         )
         Spacer(Modifier.height(10.dp))
 
@@ -370,7 +369,7 @@ private fun FailureContent(
         Text(
             "ماذا يمكنك أن تفعل؟",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = OrabiDarkBrown,
+            color = OrabiDarkBlue,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(14.dp))
@@ -390,7 +389,7 @@ private fun FailureContent(
             .height(54.dp)
             .shadow(6.dp, RoundedCornerShape(14.dp)),
         shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = OrabiGold),
+        colors = ButtonDefaults.buttonColors(containerColor = OrabiBlue),
     ) {
         Text("↻", fontSize = 18.sp, color = Color.White)
         Spacer(Modifier.width(8.dp))
@@ -460,7 +459,7 @@ private fun StepperRow(
                             when (status) {
                                 StepStatus.Success -> OrabiSuccessGreen.copy(alpha = 0.35f)
                                 StepStatus.Failed -> OrabiErrorRed.copy(alpha = 0.2f)
-                                else -> OrabiDarkBrown.copy(alpha = 0.1f)
+                                else -> OrabiDarkBlue.copy(alpha = 0.1f)
                             }
                         ),
                 )
@@ -483,8 +482,8 @@ private fun StepperRow(
                 color = when (status) {
                     StepStatus.Success -> OrabiSuccessGreen
                     StepStatus.Failed -> OrabiErrorRed
-                    StepStatus.Active -> OrabiDarkBrown
-                    StepStatus.Pending -> OrabiDarkBrown.copy(alpha = 0.4f)
+                    StepStatus.Active -> OrabiDarkBlue
+                    StepStatus.Pending -> OrabiDarkBlue.copy(alpha = 0.4f)
                 },
             )
             if (detail.isNotBlank()) {
@@ -493,9 +492,9 @@ private fun StepperRow(
                     detail,
                     style = MaterialTheme.typography.bodySmall,
                     color = when (status) {
-                        StepStatus.Active -> OrabiDarkBrown.copy(alpha = 0.6f)
-                        StepStatus.Pending -> OrabiDarkBrown.copy(alpha = 0.3f)
-                        else -> OrabiDarkBrown.copy(alpha = 0.45f)
+                        StepStatus.Active -> OrabiDarkBlue.copy(alpha = 0.6f)
+                        StepStatus.Pending -> OrabiDarkBlue.copy(alpha = 0.3f)
+                        else -> OrabiDarkBlue.copy(alpha = 0.45f)
                     },
                 )
             }
@@ -548,15 +547,15 @@ private fun StepCircle(status: StepStatus) {
                 modifier = Modifier
                     .size(size)
                     .clip(CircleShape)
-                    .background(OrabiGold.copy(alpha = 0.12f))
-                    .border(2.dp, OrabiGold.copy(alpha = ringAlpha), CircleShape),
+                    .background(OrabiBlue.copy(alpha = 0.12f))
+                    .border(2.dp, OrabiBlue.copy(alpha = ringAlpha), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(OrabiGold),
+                        .background(OrabiBlue),
                 )
             }
         }
@@ -566,15 +565,15 @@ private fun StepCircle(status: StepStatus) {
                 modifier = Modifier
                     .size(size)
                     .clip(CircleShape)
-                    .background(OrabiDarkBrown.copy(alpha = 0.06f))
-                    .border(1.dp, OrabiDarkBrown.copy(alpha = 0.15f), CircleShape),
+                    .background(OrabiDarkBlue.copy(alpha = 0.06f))
+                    .border(1.dp, OrabiDarkBlue.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(OrabiDarkBrown.copy(alpha = 0.18f)),
+                        .background(OrabiDarkBlue.copy(alpha = 0.18f)),
                 )
             }
         }
@@ -603,13 +602,13 @@ private fun LocalScanProgressSection(scanned: Int) {
             Text(
                 "تقدّم البحث",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = OrabiDarkBrown.copy(alpha = 0.6f),
+                color = OrabiDarkBlue.copy(alpha = 0.6f),
             )
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Text(
                     "${(progress * 100).toInt()}%",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = OrabiGold,
+                    color = OrabiBlue,
                 )
             }
         }
@@ -620,8 +619,8 @@ private fun LocalScanProgressSection(scanned: Int) {
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp)),
-            color = OrabiGold,
-            trackColor = OrabiLightGold.copy(alpha = 0.5f),
+            color = OrabiBlue,
+            trackColor = OrabiLightBlue.copy(alpha = 0.5f),
         )
     }
 }
@@ -664,13 +663,13 @@ private fun FailedStepRow(step: StepResult) {
             Text(
                 step.label,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = OrabiDarkBrown,
+                color = OrabiDarkBlue,
             )
             if (step.detail.isNotBlank()) {
                 Text(
                     step.detail,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OrabiDarkBrown.copy(alpha = 0.5f),
+                    color = OrabiDarkBlue.copy(alpha = 0.5f),
                 )
             }
         }
@@ -693,7 +692,7 @@ private fun GuidanceItem(number: String, text: String) {
                 .clip(CircleShape)
                 .background(
                     Brush.verticalGradient(
-                        listOf(OrabiGold.copy(alpha = 0.18f), OrabiGold.copy(alpha = 0.08f))
+                        listOf(OrabiBlue.copy(alpha = 0.18f), OrabiBlue.copy(alpha = 0.08f))
                     )
                 ),
             contentAlignment = Alignment.Center,
@@ -701,14 +700,14 @@ private fun GuidanceItem(number: String, text: String) {
             Text(
                 number,
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = OrabiGold,
+                color = OrabiBlue,
             )
         }
         Spacer(Modifier.width(10.dp))
         Text(
             text,
             style = MaterialTheme.typography.bodySmall,
-            color = OrabiDarkBrown.copy(alpha = 0.7f),
+            color = OrabiDarkBlue.copy(alpha = 0.7f),
             modifier = Modifier.weight(1f),
         )
     }

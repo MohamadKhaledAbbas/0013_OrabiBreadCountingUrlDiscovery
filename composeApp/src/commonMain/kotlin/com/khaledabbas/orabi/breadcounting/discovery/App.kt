@@ -33,31 +33,31 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
 
-// ── Orabi brand M3 colour scheme ─────────────────────────────
-private val OrabiGold = Color(0xFFD4AF37)
-private val OrabiDarkBrown = Color(0xFF5A4A2C)
-private val OrabiCream = Color(0xFFF5EDDC)
-private val OrabiLightGold = Color(0xFFF5E6B8)
+// ── Orabi brand M3 colour scheme – Ocean Blue ────────────────
+private val OrabiBlue = Color(0xFF1976D2)
+private val OrabiDarkBlue = Color(0xFF0D253F)
+private val OrabiLightBg = Color(0xFFF0F4FA)
+private val OrabiLightBlue = Color(0xFFBBDEFB)
 private val OrabiErrorRed = Color(0xFFC62828)
 
 private val OrabiColorScheme = lightColorScheme(
-    primary = OrabiGold,
+    primary = OrabiBlue,
     onPrimary = Color.White,
-    primaryContainer = OrabiLightGold,
-    onPrimaryContainer = OrabiDarkBrown,
-    secondary = OrabiDarkBrown,
+    primaryContainer = OrabiLightBlue,
+    onPrimaryContainer = OrabiDarkBlue,
+    secondary = OrabiDarkBlue,
     onSecondary = Color.White,
-    secondaryContainer = OrabiCream,
-    onSecondaryContainer = OrabiDarkBrown,
-    background = OrabiCream,
-    onBackground = OrabiDarkBrown,
-    surface = OrabiCream,
-    onSurface = OrabiDarkBrown,
+    secondaryContainer = OrabiLightBg,
+    onSecondaryContainer = OrabiDarkBlue,
+    background = OrabiLightBg,
+    onBackground = OrabiDarkBlue,
+    surface = OrabiLightBg,
+    onSurface = OrabiDarkBlue,
     surfaceVariant = Color.White,
-    onSurfaceVariant = OrabiDarkBrown.copy(alpha = 0.7f),
+    onSurfaceVariant = OrabiDarkBlue.copy(alpha = 0.7f),
     error = OrabiErrorRed,
     onError = Color.White,
-    outline = OrabiDarkBrown.copy(alpha = 0.2f),
+    outline = OrabiDarkBlue.copy(alpha = 0.2f),
 )
 
 // Arabic step labels (shared between App flow and tests)
