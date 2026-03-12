@@ -1,48 +1,124 @@
 package com.khaledabbas.orabi.breadcounting.discovery
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import orabibreadcountingurldiscovery.composeapp.generated.resources.Res
-import orabibreadcountingurldiscovery.composeapp.generated.resources.compose_multiplatform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
-@Preview
 fun App() {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+        var discoveryState by remember { mutableStateOf<DiscoveryState>(DiscoveryState.Idle) }
+        val scope = rememberCoroutineScope()
+        val engine = remember { DiscoveryEngine() }
+        val cache = remember { TunnelCache() }
+
+        /** Runs the full three-step discovery flow. */
+        fun runDiscovery() {
+            discoveryState = DiscoveryState.Idle
+            scope.launch(Dispatchers.Default) {
+                val completed = mutableListOf<StepResult>()
+
+                // ── Step 1: Cached tunnel ────────────────────────
+                val cachedUrl = cache.getCachedUrl()
+                if (cachedUrl != null) {
+                    discoveryState = DiscoveryState.Discovering(
+                        stepLabel = "Cached Connection",
+                        stepDetail = "Trying previously known tunnel…",
+                        completedSteps = completed.toList(),
+                    )
+                    val ok = engine.verifyBoard(cachedUrl)
+                    if (ok) {
+                        discoveryState = DiscoveryState.Connected(cachedUrl)
+                        return@launch
+                    }
+                    completed += StepResult("Cached Connection", false, "Cached tunnel unreachable")
                 }
+
+                // ── Step 2: Cloud discovery ──────────────────────
+                discoveryState = DiscoveryState.Discovering(
+                    stepLabel = "Cloud Discovery",
+                    stepDetail = "Fetching tunnel URL from cloud…",
+                    completedSteps = completed.toList(),
+                )
+                val tunnelUrl = engine.fetchTunnelUrl(DiscoveryConfig.CLOUD_BASE_URL)
+                if (tunnelUrl != null) {
+                    discoveryState = DiscoveryState.Discovering(
+                        stepLabel = "Cloud Discovery",
+                        stepDetail = "Verifying cloud tunnel…",
+                        completedSteps = completed.toList(),
+                    )
+                    val ok = engine.verifyBoard(tunnelUrl)
+                    if (ok) {
+                        cache.saveCachedUrl(tunnelUrl)
+                        discoveryState = DiscoveryState.Connected(tunnelUrl)
+                        return@launch
+                    }
+                    completed += StepResult("Cloud Discovery", false, "Tunnel found but board unreachable")
+                } else {
+                    completed += StepResult("Cloud Discovery", false, "Could not reach cloud service")
+                }
+
+                // ── Step 3: Local network scan ───────────────────
+                discoveryState = DiscoveryState.Discovering(
+                    stepLabel = "Local Network Scan",
+                    stepDetail = "Scanning local network for the board…",
+                    completedSteps = completed.toList(),
+                    localScanProgress = 0,
+                )
+
+                val localUrl = engine.scanLocalNetwork(
+                    port = DiscoveryConfig.BOARD_PORT,
+                    onProgress = { scanned, _ ->
+                        discoveryState = DiscoveryState.Discovering(
+                            stepLabel = "Local Network Scan",
+                            stepDetail = "Scanning local network for the board…",
+                            completedSteps = completed.toList(),
+                            localScanProgress = scanned,
+                        )
+                    }
+                )
+                if (localUrl != null) {
+                    cache.saveCachedUrl(localUrl)
+                    discoveryState = DiscoveryState.Connected(localUrl)
+                    return@launch
+                }
+                completed += StepResult(
+                    "Local Network Scan",
+                    false,
+                    "No board found on the local network"
+                )
+
+                // ── All failed ───────────────────────────────────
+                discoveryState = DiscoveryState.Failed(completed)
+            }
+        }
+
+        // Kick off discovery on first composition
+        LaunchedEffect(Unit) {
+            runDiscovery()
+        }
+
+        // Dispose engine when leaving composition
+        DisposableEffect(Unit) {
+            onDispose { engine.close() }
+        }
+
+        // ── Render ───────────────────────────────────────────
+        when (val s = discoveryState) {
+            is DiscoveryState.Connected -> {
+                BoardWebView(
+                    url = s.boardUrl,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            else -> {
+                DiscoveryScreen(
+                    state = discoveryState,
+                    onRetry = { runDiscovery() },
+                )
             }
         }
     }
