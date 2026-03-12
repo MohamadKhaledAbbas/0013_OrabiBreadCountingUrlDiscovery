@@ -252,10 +252,14 @@ fun App() {
             }
         }
 
-        // Auto-show WebView as soon as discovery connects
+        // Auto-show WebView / open browser as soon as discovery connects
         LaunchedEffect(discoveryState) {
             if (discoveryState is DiscoveryState.Connected) {
-                showWebView = true
+                if (useExternalBrowser) {
+                    openInExternalBrowser((discoveryState as DiscoveryState.Connected).boardUrl)
+                } else {
+                    showWebView = true
+                }
             }
         }
 
@@ -275,7 +279,7 @@ fun App() {
 
         // ── Render ───────────────────────────────────────────
         val currentState = discoveryState
-        if (showWebView && currentState is DiscoveryState.Connected) {
+        if (!useExternalBrowser && showWebView && currentState is DiscoveryState.Connected) {
             // Intercept system back → return to discovery screen
             PlatformBackHandler {
                 trace(activeRunId, "back_from_webview", "url=${currentState.boardUrl}")
@@ -320,7 +324,14 @@ fun App() {
             DiscoveryScreen(
                 state = discoveryState,
                 onRetry = { runDiscovery(trigger = "user_retry") },
-                onOpenBoard = { showWebView = true },
+                onOpenBoard = {
+                    val connState = discoveryState as? DiscoveryState.Connected
+                    if (connState != null && useExternalBrowser) {
+                        openInExternalBrowser(connState.boardUrl)
+                    } else {
+                        showWebView = true
+                    }
+                },
             )
         }
     }

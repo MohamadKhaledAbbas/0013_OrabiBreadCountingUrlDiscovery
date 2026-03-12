@@ -1,38 +1,24 @@
 package com.khaledabbas.orabi.breadcounting.discovery
 
-import android.annotation.SuppressLint
-import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 
-@SuppressLint("SetJavaScriptEnabled")
+/**
+ * On Android the board URL is opened in the system browser instead of an
+ * embedded WebView.  This composable only exists to satisfy the expect/actual
+ * contract – it will fire the browser and show a simple placeholder.
+ */
 @Composable
 actual fun BoardWebView(url: String, modifier: Modifier) {
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            WebView(context).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                )
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                webViewClient = WebViewClient()
-                webChromeClient = WebChromeClient()
-                loadUrl(url)
-            }
-        },
-        update = { webView ->
-            if (webView.url != url) {
-                webView.loadUrl(url)
-            }
-        },
-    )
+    LaunchedEffect(url) {
+        openInExternalBrowser(url)
+    }
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("تم فتح لوحة العدّ في المتصفح")
+    }
 }
