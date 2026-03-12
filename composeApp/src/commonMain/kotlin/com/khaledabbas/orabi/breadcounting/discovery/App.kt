@@ -7,6 +7,13 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// Arabic step labels (shared between App flow and tests)
+internal object ArabicLabels {
+    const val STEP_CACHED = "الاتصال المحفوظ"
+    const val STEP_CLOUD = "الاتصال السحابي"
+    const val STEP_LOCAL = "البحث في الشبكة المحلية"
+}
+
 @Composable
 fun App() {
     MaterialTheme {
@@ -28,49 +35,49 @@ fun App() {
                 val cachedUrl = cache.getCachedUrl()
                 if (cachedUrl != null) {
                     discoveryState = DiscoveryState.Discovering(
-                        stepLabel = "الاتصال المحفوظ",
+                        stepLabel = ArabicLabels.STEP_CACHED,
                         stepDetail = "جارٍ محاولة الاتصال بالعنوان المحفوظ سابقاً…",
                         completedSteps = completed.toList(),
                     )
                     val ok = engine.verifyBoard(cachedUrl)
                     if (ok) {
-                        completed += StepResult("الاتصال المحفوظ", true, "تم الاتصال بالعنوان المحفوظ بنجاح")
+                        completed += StepResult(ArabicLabels.STEP_CACHED, true, "تم الاتصال بالعنوان المحفوظ بنجاح")
                         discoveryState = DiscoveryState.Connected(cachedUrl)
                         return@launch
                     }
-                    completed += StepResult("الاتصال المحفوظ", false, "العنوان المحفوظ غير متاح حالياً")
+                    completed += StepResult(ArabicLabels.STEP_CACHED, false, "العنوان المحفوظ غير متاح حالياً")
                 } else {
-                    completed += StepResult("الاتصال المحفوظ", false, "لا يوجد عنوان محفوظ مسبقاً")
+                    completed += StepResult(ArabicLabels.STEP_CACHED, false, "لا يوجد عنوان محفوظ مسبقاً")
                 }
 
                 // ── Step 2: Cloud discovery ──────────────────────
                 discoveryState = DiscoveryState.Discovering(
-                    stepLabel = "الاتصال السحابي",
+                    stepLabel = ArabicLabels.STEP_CLOUD,
                     stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
                     completedSteps = completed.toList(),
                 )
                 val tunnelUrl = engine.fetchTunnelUrl(DiscoveryConfig.CLOUD_BASE_URL)
                 if (tunnelUrl != null) {
                     discoveryState = DiscoveryState.Discovering(
-                        stepLabel = "الاتصال السحابي",
+                        stepLabel = ArabicLabels.STEP_CLOUD,
                         stepDetail = "جارٍ التحقق من اتصال النفق السحابي…",
                         completedSteps = completed.toList(),
                     )
                     val ok = engine.verifyBoard(tunnelUrl)
                     if (ok) {
                         cache.saveCachedUrl(tunnelUrl)
-                        completed += StepResult("الاتصال السحابي", true, "تم الاتصال عبر النفق السحابي بنجاح")
+                        completed += StepResult(ArabicLabels.STEP_CLOUD, true, "تم الاتصال عبر النفق السحابي بنجاح")
                         discoveryState = DiscoveryState.Connected(tunnelUrl)
                         return@launch
                     }
-                    completed += StepResult("الاتصال السحابي", false, "تم العثور على النفق لكن لوحة العدّ لا تستجيب")
+                    completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تم العثور على النفق لكن لوحة العدّ لا تستجيب")
                 } else {
-                    completed += StepResult("الاتصال السحابي", false, "تعذّر الوصول إلى الخادم السحابي")
+                    completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تعذّر الوصول إلى الخادم السحابي")
                 }
 
                 // ── Step 3: Local network scan ───────────────────
                 discoveryState = DiscoveryState.Discovering(
-                    stepLabel = "البحث في الشبكة المحلية",
+                    stepLabel = ArabicLabels.STEP_LOCAL,
                     stepDetail = "جارٍ فحص عناوين الشبكة المحلية…",
                     completedSteps = completed.toList(),
                     localScanProgress = 0,
@@ -80,7 +87,7 @@ fun App() {
                     port = DiscoveryConfig.BOARD_PORT,
                     onProgress = { scanned, _ ->
                         discoveryState = DiscoveryState.Discovering(
-                            stepLabel = "البحث في الشبكة المحلية",
+                            stepLabel = ArabicLabels.STEP_LOCAL,
                             stepDetail = "جارٍ فحص عناوين الشبكة المحلية…",
                             completedSteps = completed.toList(),
                             localScanProgress = scanned,
@@ -89,12 +96,12 @@ fun App() {
                 )
                 if (localUrl != null) {
                     cache.saveCachedUrl(localUrl)
-                    completed += StepResult("البحث في الشبكة المحلية", true, "تم العثور على لوحة العدّ في الشبكة المحلية")
+                    completed += StepResult(ArabicLabels.STEP_LOCAL, true, "تم العثور على لوحة العدّ في الشبكة المحلية")
                     discoveryState = DiscoveryState.Connected(localUrl)
                     return@launch
                 }
                 completed += StepResult(
-                    "البحث في الشبكة المحلية",
+                    ArabicLabels.STEP_LOCAL,
                     false,
                     "لم يتم العثور على لوحة العدّ في الشبكة المحلية"
                 )
