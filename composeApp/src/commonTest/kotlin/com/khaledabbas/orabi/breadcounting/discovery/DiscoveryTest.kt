@@ -99,7 +99,7 @@ class DiscoveryConfigTest {
     }
 
     @Test
-    fun cloudTimeoutExceedsLocalScanTimeout() {
+    fun cloudTimeoutIsAtLeastLocalScanTimeout() {
         assert(DiscoveryConfig.CLOUD_TIMEOUT_MS >= DiscoveryConfig.LOCAL_SCAN_TIMEOUT_MS)
     }
 

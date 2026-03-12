@@ -96,13 +96,16 @@ class DiscoveryEngine {
                     if (found) baseUrl else null
                 }
             }
-            // Return the first non-null result, then cancel the rest.
+            // Return the first non-null result, then cancel remaining tasks.
             var result: String? = null
-            for (d in deferred) {
+            for ((index, d) in deferred.withIndex()) {
                 val r = d.await()
                 if (r != null) {
                     result = r
-                    deferred.forEach { it.cancel() }
+                    // Cancel only the tasks we haven't awaited yet
+                    for (j in (index + 1) until deferred.size) {
+                        deferred[j].cancel()
+                    }
                     break
                 }
             }

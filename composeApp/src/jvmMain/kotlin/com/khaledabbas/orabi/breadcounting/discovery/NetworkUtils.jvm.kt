@@ -11,12 +11,7 @@ actual fun getLocalIpAddress(): String? {
             for (addr in iface.inetAddresses) {
                 if (addr is Inet4Address && !addr.isLoopbackAddress) {
                     val ip = addr.hostAddress ?: continue
-                    if (ip.startsWith("192.168.") ||
-                        ip.startsWith("10.") ||
-                        ip.startsWith("172.")
-                    ) {
-                        return ip
-                    }
+                    if (isPrivateIp(ip)) return ip
                 }
             }
         }
@@ -24,4 +19,14 @@ actual fun getLocalIpAddress(): String? {
     } catch (_: Exception) {
         null
     }
+}
+
+/** Returns true if [ip] belongs to a private (RFC 1918) address range. */
+private fun isPrivateIp(ip: String): Boolean {
+    if (ip.startsWith("192.168.") || ip.startsWith("10.")) return true
+    if (ip.startsWith("172.")) {
+        val secondOctet = ip.split(".").getOrNull(1)?.toIntOrNull() ?: return false
+        return secondOctet in 16..31
+    }
+    return false
 }
