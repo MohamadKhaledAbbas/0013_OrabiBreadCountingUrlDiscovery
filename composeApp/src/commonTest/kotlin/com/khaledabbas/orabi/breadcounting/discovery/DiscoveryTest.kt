@@ -48,13 +48,13 @@ class DiscoveryStateTest {
     @Test
     fun discoveringCarriesStepInfo() {
         val state = DiscoveryState.Discovering(
-            stepLabel = "Cloud Discovery",
-            stepDetail = "Fetching tunnel URL from cloud…",
+            stepLabel = "الاتصال السحابي",
+            stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
             completedSteps = listOf(
-                StepResult("Cached Connection", false, "unreachable")
+                StepResult("الاتصال المحفوظ", false, "العنوان المحفوظ غير متاح حالياً")
             ),
         )
-        assertEquals("Cloud Discovery", state.stepLabel)
+        assertEquals("الاتصال السحابي", state.stepLabel)
         assertEquals(1, state.completedSteps.size)
         assertNull(state.localScanProgress)
     }
@@ -62,8 +62,8 @@ class DiscoveryStateTest {
     @Test
     fun discoveringCarriesLocalScanProgress() {
         val state = DiscoveryState.Discovering(
-            stepLabel = "Local Network Scan",
-            stepDetail = "Scanning…",
+            stepLabel = "البحث في الشبكة المحلية",
+            stepDetail = "جارٍ فحص عناوين الشبكة المحلية…",
             localScanProgress = 42,
         )
         assertNotNull(state.localScanProgress)
@@ -79,9 +79,9 @@ class DiscoveryStateTest {
     @Test
     fun failedContainsAllStepResults() {
         val steps = listOf(
-            StepResult("Cached", false, "unreachable"),
-            StepResult("Cloud", false, "timeout"),
-            StepResult("Local", false, "no board found"),
+            StepResult("الاتصال المحفوظ", false, "لا يوجد عنوان محفوظ مسبقاً"),
+            StepResult("الاتصال السحابي", false, "تعذّر الوصول إلى الخادم السحابي"),
+            StepResult("البحث في الشبكة المحلية", false, "لم يتم العثور على لوحة العدّ في الشبكة المحلية"),
         )
         val state = DiscoveryState.Failed(steps)
         assertEquals(3, state.completedSteps.size)

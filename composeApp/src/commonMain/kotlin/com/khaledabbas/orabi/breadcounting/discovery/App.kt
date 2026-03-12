@@ -15,7 +15,10 @@ fun App() {
         val engine = remember { DiscoveryEngine() }
         val cache = remember { TunnelCache() }
 
-        /** Runs the full three-step discovery flow. */
+        /**
+         * Runs the full three-step discovery flow: Cached → Cloud → Local.
+         * Always starts from the beginning on every call (including retries).
+         */
         fun runDiscovery() {
             discoveryState = DiscoveryState.Idle
             scope.launch(Dispatchers.Default) {
@@ -25,46 +28,50 @@ fun App() {
                 val cachedUrl = cache.getCachedUrl()
                 if (cachedUrl != null) {
                     discoveryState = DiscoveryState.Discovering(
-                        stepLabel = "Cached Connection",
-                        stepDetail = "Trying previously known tunnel…",
+                        stepLabel = "الاتصال المحفوظ",
+                        stepDetail = "جارٍ محاولة الاتصال بالعنوان المحفوظ سابقاً…",
                         completedSteps = completed.toList(),
                     )
                     val ok = engine.verifyBoard(cachedUrl)
                     if (ok) {
+                        completed += StepResult("الاتصال المحفوظ", true, "تم الاتصال بالعنوان المحفوظ بنجاح")
                         discoveryState = DiscoveryState.Connected(cachedUrl)
                         return@launch
                     }
-                    completed += StepResult("Cached Connection", false, "Cached tunnel unreachable")
+                    completed += StepResult("الاتصال المحفوظ", false, "العنوان المحفوظ غير متاح حالياً")
+                } else {
+                    completed += StepResult("الاتصال المحفوظ", false, "لا يوجد عنوان محفوظ مسبقاً")
                 }
 
                 // ── Step 2: Cloud discovery ──────────────────────
                 discoveryState = DiscoveryState.Discovering(
-                    stepLabel = "Cloud Discovery",
-                    stepDetail = "Fetching tunnel URL from cloud…",
+                    stepLabel = "الاتصال السحابي",
+                    stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
                     completedSteps = completed.toList(),
                 )
                 val tunnelUrl = engine.fetchTunnelUrl(DiscoveryConfig.CLOUD_BASE_URL)
                 if (tunnelUrl != null) {
                     discoveryState = DiscoveryState.Discovering(
-                        stepLabel = "Cloud Discovery",
-                        stepDetail = "Verifying cloud tunnel…",
+                        stepLabel = "الاتصال السحابي",
+                        stepDetail = "جارٍ التحقق من اتصال النفق السحابي…",
                         completedSteps = completed.toList(),
                     )
                     val ok = engine.verifyBoard(tunnelUrl)
                     if (ok) {
                         cache.saveCachedUrl(tunnelUrl)
+                        completed += StepResult("الاتصال السحابي", true, "تم الاتصال عبر النفق السحابي بنجاح")
                         discoveryState = DiscoveryState.Connected(tunnelUrl)
                         return@launch
                     }
-                    completed += StepResult("Cloud Discovery", false, "Tunnel found but board unreachable")
+                    completed += StepResult("الاتصال السحابي", false, "تم العثور على النفق لكن لوحة العدّ لا تستجيب")
                 } else {
-                    completed += StepResult("Cloud Discovery", false, "Could not reach cloud service")
+                    completed += StepResult("الاتصال السحابي", false, "تعذّر الوصول إلى الخادم السحابي")
                 }
 
                 // ── Step 3: Local network scan ───────────────────
                 discoveryState = DiscoveryState.Discovering(
-                    stepLabel = "Local Network Scan",
-                    stepDetail = "Scanning local network for the board…",
+                    stepLabel = "البحث في الشبكة المحلية",
+                    stepDetail = "جارٍ فحص عناوين الشبكة المحلية…",
                     completedSteps = completed.toList(),
                     localScanProgress = 0,
                 )
@@ -73,8 +80,8 @@ fun App() {
                     port = DiscoveryConfig.BOARD_PORT,
                     onProgress = { scanned, _ ->
                         discoveryState = DiscoveryState.Discovering(
-                            stepLabel = "Local Network Scan",
-                            stepDetail = "Scanning local network for the board…",
+                            stepLabel = "البحث في الشبكة المحلية",
+                            stepDetail = "جارٍ فحص عناوين الشبكة المحلية…",
                             completedSteps = completed.toList(),
                             localScanProgress = scanned,
                         )
@@ -82,13 +89,14 @@ fun App() {
                 )
                 if (localUrl != null) {
                     cache.saveCachedUrl(localUrl)
+                    completed += StepResult("البحث في الشبكة المحلية", true, "تم العثور على لوحة العدّ في الشبكة المحلية")
                     discoveryState = DiscoveryState.Connected(localUrl)
                     return@launch
                 }
                 completed += StepResult(
-                    "Local Network Scan",
+                    "البحث في الشبكة المحلية",
                     false,
-                    "No board found on the local network"
+                    "لم يتم العثور على لوحة العدّ في الشبكة المحلية"
                 )
 
                 // ── All failed ───────────────────────────────────
