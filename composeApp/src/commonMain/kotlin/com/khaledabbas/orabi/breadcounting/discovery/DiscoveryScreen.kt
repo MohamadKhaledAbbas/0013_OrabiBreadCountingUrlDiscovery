@@ -542,9 +542,11 @@ private fun StepCircle(status: StepStatus) {
 // Local scan progress (inside stepper)
 // ──────────────────────────────────────────────────────────────
 
+private const val TOTAL_SCAN_ADDRESSES = 254
+
 @Composable
 private fun LocalScanProgressSection(scanned: Int) {
-    val progress = scanned / 254f
+    val progress = scanned / TOTAL_SCAN_ADDRESSES.toFloat()
     Column(
         modifier = Modifier
             .fillMaxWidth()
