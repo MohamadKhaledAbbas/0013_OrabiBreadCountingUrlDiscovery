@@ -7,6 +7,16 @@ data class StepResult(
     val detail: String = ""
 )
 
+/** Describes which discovery strategy found the board. */
+enum class ConnectionSource {
+    /** Found via local /24 subnet scan. */
+    LOCAL,
+    /** Found via a previously-cached (remote/tunnel) URL. */
+    CACHED,
+    /** Found via a fresh Cloudflare Worker tunnel lookup. */
+    CLOUD,
+}
+
 /** Overall discovery UI state. */
 sealed class DiscoveryState {
 
@@ -23,7 +33,10 @@ sealed class DiscoveryState {
     ) : DiscoveryState()
 
     /** A board was found – show the WebView. */
-    data class Connected(val boardUrl: String) : DiscoveryState()
+    data class Connected(
+        val boardUrl: String,
+        val source: ConnectionSource,
+    ) : DiscoveryState()
 
     /** All discovery attempts failed. */
     data class Failed(val completedSteps: List<StepResult>) : DiscoveryState()

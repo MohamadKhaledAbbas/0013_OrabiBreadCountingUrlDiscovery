@@ -60,6 +60,34 @@ private val OrabiColorScheme = lightColorScheme(
     outline = OrabiDarkBlue.copy(alpha = 0.2f),
 )
 
+// ── Helper: detect local-network URLs ────────────────────────
+/**
+ * Returns `true` when [url] points at a private/local IP address
+ * (RFC 1918 ranges 10.x, 172.16–31.x, 192.168.x, or link-local 169.254.x).
+ * Used to decide whether a cached URL should be re-tried after a full
+ * local subnet scan has already been performed.
+ */
+private fun isLocalNetworkUrl(url: String): Boolean {
+    // Strip scheme ("http://", "https://") and everything after the host
+    val host = url
+        .substringAfter("://")
+        .substringBefore("/")
+        .substringBefore(":")
+        .trim()
+    val parts = host.split(".")
+    if (parts.size != 4) return false          // not an IPv4 literal
+    val octets = parts.mapNotNull { it.toIntOrNull() }
+    if (octets.size != 4) return false
+    val (a, b, _, _) = octets
+    return when {
+        a == 10                          -> true   // 10.0.0.0/8
+        a == 172 && b in 16..31          -> true   // 172.16.0.0/12
+        a == 192 && b == 168             -> true   // 192.168.0.0/16
+        a == 169 && b == 254             -> true   // 169.254.0.0/16  (link-local)
+        else                             -> false
+    }
+}
+
 // Arabic step labels (shared between App flow and tests)
 internal object ArabicLabels {
     const val STEP_CACHED = "الاتصال المحفوظ"
@@ -86,8 +114,14 @@ fun App() {
         }
 
         /**
-         * Runs the full three-step discovery flow: Cached → Cloud → Local.
-         * Always starts from the beginning on every call (including retries).
+         * Runs the full three-step discovery flow: Local → Cached → Cloud.
+         *
+         * Priority rationale:
+         *  1. **Local scan** – fastest, lowest latency if the board is on the same LAN.
+         *  2. **Cached URL** – only tried when it is a *remote/tunnel* URL.
+         *     If the cached URL is a local IP we skip it because the local scan
+         *     already exhausted the entire /24 subnet.
+         *  3. **Cloud** – last resort; fetches a fresh tunnel URL from the worker.
          */
         fun runDiscovery(trigger: String) {
             showWebView = false
@@ -114,78 +148,7 @@ fun App() {
                 fun isRunActive(): Boolean = activeRunId == runId
 
                 try {
-                    // ── Step 1: Cached tunnel ────────────────────────
-                    runTrace("step_start", "step=cached")
-                    val cachedUrl = cache.getCachedUrl()
-                    runTrace("cache_lookup", if (cachedUrl == null) "result=miss" else "result=hit, url=$cachedUrl")
-
-                    if (cachedUrl != null) {
-                        discoveryState = DiscoveryState.Discovering(
-                            stepLabel = ArabicLabels.STEP_CACHED,
-                            stepDetail = "جارٍ محاولة الاتصال بالعنوان المحفوظ سابقاً…",
-                            completedSteps = completed.toList(),
-                        )
-                        runTrace("state_update", "Discovering step=cached")
-
-                        val ok = engine.verifyBoard(cachedUrl)
-                        runTrace("verify_cached", "url=$cachedUrl, success=$ok")
-                        if (ok) {
-                            completed += StepResult(ArabicLabels.STEP_CACHED, true, "تم الاتصال بالعنوان المحفوظ بنجاح")
-                            discoveryState = DiscoveryState.Connected(cachedUrl)
-                            runTrace("state_update", "Connected via=cached, url=$cachedUrl")
-                            return@launch
-                        }
-                        completed += StepResult(ArabicLabels.STEP_CACHED, false, "العنوان المحفوظ غير متاح حالياً")
-                    } else {
-                        completed += StepResult(ArabicLabels.STEP_CACHED, false, "لا يوجد عنوان محفوظ مسبقاً")
-                    }
-
-                    if (!isRunActive()) {
-                        runTrace("run_stale", "after_step=cached")
-                        return@launch
-                    }
-
-                    // ── Step 2: Cloud discovery ──────────────────────
-                    runTrace("step_start", "step=cloud")
-                    discoveryState = DiscoveryState.Discovering(
-                        stepLabel = ArabicLabels.STEP_CLOUD,
-                        stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
-                        completedSteps = completed.toList(),
-                    )
-                    runTrace("state_update", "Discovering step=cloud fetch")
-
-                    val tunnelUrl = engine.fetchTunnelUrl(DiscoveryConfig.CLOUD_BASE_URL)
-                    runTrace("cloud_fetch", if (tunnelUrl == null) "result=failed" else "result=success, url=$tunnelUrl")
-
-                    if (tunnelUrl != null) {
-                        discoveryState = DiscoveryState.Discovering(
-                            stepLabel = ArabicLabels.STEP_CLOUD,
-                            stepDetail = "جارٍ التحقق من اتصال النفق السحابي…",
-                            completedSteps = completed.toList(),
-                        )
-                        runTrace("state_update", "Discovering step=cloud verify")
-
-                        val ok = engine.verifyBoard(tunnelUrl)
-                        runTrace("verify_cloud", "url=$tunnelUrl, success=$ok")
-                        if (ok) {
-                            cache.saveCachedUrl(tunnelUrl)
-                            runTrace("cache_save", "source=cloud, url=$tunnelUrl")
-                            completed += StepResult(ArabicLabels.STEP_CLOUD, true, "تم الاتصال عبر النفق السحابي بنجاح")
-                            discoveryState = DiscoveryState.Connected(tunnelUrl)
-                            runTrace("state_update", "Connected via=cloud, url=$tunnelUrl")
-                            return@launch
-                        }
-                        completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تم العثور على النفق لكن لوحة العدّ لا تستجيب")
-                    } else {
-                        completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تعذّر الوصول إلى الخادم السحابي")
-                    }
-
-                    if (!isRunActive()) {
-                        runTrace("run_stale", "after_step=cloud")
-                        return@launch
-                    }
-
-                    // ── Step 3: Local network scan ───────────────────
+                    // ── Step 1: Local network scan ───────────────────
                     runTrace("step_start", "step=local_scan")
                     discoveryState = DiscoveryState.Discovering(
                         stepLabel = ArabicLabels.STEP_LOCAL,
@@ -219,7 +182,7 @@ fun App() {
                         cache.saveCachedUrl(localUrl)
                         runTrace("cache_save", "source=local_scan, url=$localUrl")
                         completed += StepResult(ArabicLabels.STEP_LOCAL, true, "تم العثور على لوحة العدّ في الشبكة المحلية")
-                        discoveryState = DiscoveryState.Connected(localUrl)
+                        discoveryState = DiscoveryState.Connected(localUrl, ConnectionSource.LOCAL)
                         runTrace("state_update", "Connected via=local_scan, url=$localUrl")
                         return@launch
                     }
@@ -228,6 +191,91 @@ fun App() {
                         false,
                         "لم يتم العثور على لوحة العدّ في الشبكة المحلية"
                     )
+
+                    if (!isRunActive()) {
+                        runTrace("run_stale", "after_step=local_scan")
+                        return@launch
+                    }
+
+                    // ── Step 2: Cached tunnel ────────────────────────
+                    // Only attempt the cached URL when it is a remote/tunnel
+                    // address. If it is a local IP, the local scan above
+                    // already covered the entire subnet — retrying is pointless.
+                    runTrace("step_start", "step=cached")
+                    val cachedUrl = cache.getCachedUrl()
+                    val cachedIsLocalIp = cachedUrl != null && isLocalNetworkUrl(cachedUrl)
+                    runTrace(
+                        "cache_lookup",
+                        when {
+                            cachedUrl == null -> "result=miss"
+                            cachedIsLocalIp  -> "result=hit_local_skipped, url=$cachedUrl"
+                            else             -> "result=hit_remote, url=$cachedUrl"
+                        }
+                    )
+
+                    if (cachedUrl != null && !cachedIsLocalIp) {
+                        discoveryState = DiscoveryState.Discovering(
+                            stepLabel = ArabicLabels.STEP_CACHED,
+                            stepDetail = "جارٍ محاولة الاتصال بالعنوان المحفوظ سابقاً…",
+                            completedSteps = completed.toList(),
+                        )
+                        runTrace("state_update", "Discovering step=cached")
+
+                        val ok = engine.verifyBoard(cachedUrl)
+                        runTrace("verify_cached", "url=$cachedUrl, success=$ok")
+                        if (ok) {
+                            completed += StepResult(ArabicLabels.STEP_CACHED, true, "تم الاتصال بالعنوان المحفوظ بنجاح")
+                            discoveryState = DiscoveryState.Connected(cachedUrl, ConnectionSource.CACHED)
+                            runTrace("state_update", "Connected via=cached, url=$cachedUrl")
+                            return@launch
+                        }
+                        completed += StepResult(ArabicLabels.STEP_CACHED, false, "العنوان المحفوظ غير متاح حالياً")
+                    } else if (cachedIsLocalIp) {
+                        completed += StepResult(ArabicLabels.STEP_CACHED, false, "العنوان المحفوظ محلي — تم فحصه بالفعل")
+                    } else {
+                        completed += StepResult(ArabicLabels.STEP_CACHED, false, "لا يوجد عنوان محفوظ مسبقاً")
+                    }
+
+                    if (!isRunActive()) {
+                        runTrace("run_stale", "after_step=cached")
+                        return@launch
+                    }
+
+                    // ── Step 3: Cloud discovery ──────────────────────
+                    runTrace("step_start", "step=cloud")
+                    discoveryState = DiscoveryState.Discovering(
+                        stepLabel = ArabicLabels.STEP_CLOUD,
+                        stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
+                        completedSteps = completed.toList(),
+                    )
+                    runTrace("state_update", "Discovering step=cloud fetch")
+
+                    val tunnelUrl = engine.fetchTunnelUrl(DiscoveryConfig.CLOUD_BASE_URL)
+                    runTrace("cloud_fetch", if (tunnelUrl == null) "result=failed" else "result=success, url=$tunnelUrl")
+
+                    if (tunnelUrl != null) {
+                        discoveryState = DiscoveryState.Discovering(
+                            stepLabel = ArabicLabels.STEP_CLOUD,
+                            stepDetail = "جارٍ التحقق من اتصال النفق السحابي…",
+                            completedSteps = completed.toList(),
+                        )
+                        runTrace("state_update", "Discovering step=cloud verify")
+
+                        val ok = engine.verifyBoard(tunnelUrl)
+                        runTrace("verify_cloud", "url=$tunnelUrl, success=$ok")
+                        if (ok) {
+                            cache.saveCachedUrl(tunnelUrl)
+                            runTrace("cache_save", "source=cloud, url=$tunnelUrl")
+                            completed += StepResult(ArabicLabels.STEP_CLOUD, true, "تم الاتصال عبر النفق السحابي بنجاح")
+                            discoveryState = DiscoveryState.Connected(tunnelUrl, ConnectionSource.CLOUD)
+                            runTrace("state_update", "Connected via=cloud, url=$tunnelUrl")
+                            return@launch
+                        }
+                        completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تم العثور على النفق لكن لوحة العدّ لا تستجيب")
+                    } else {
+                        completed += StepResult(ArabicLabels.STEP_CLOUD, false, "تعذّر الوصول إلى الخادم السحابي")
+                    }
+
 
                     // ── All failed ───────────────────────────────────
                     discoveryState = DiscoveryState.Failed(completed)

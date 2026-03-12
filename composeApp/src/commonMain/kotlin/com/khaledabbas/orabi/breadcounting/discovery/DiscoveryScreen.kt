@@ -48,15 +48,15 @@ private val OrabiLightBlue = Color(0xFFBBDEFB)
 private data class PhaseInfo(val label: String, val pendingDetail: String)
 
 private val AllPhases = listOf(
+    PhaseInfo(ArabicLabels.STEP_LOCAL, "فحص الشبكة المحلية…"),
     PhaseInfo(ArabicLabels.STEP_CACHED, "البحث في الاتصالات المحفوظة…"),
     PhaseInfo(ArabicLabels.STEP_CLOUD, "الاتصال بالخادم السحابي…"),
-    PhaseInfo(ArabicLabels.STEP_LOCAL, "فحص الشبكة المحلية…"),
 )
 
 private fun phaseIndex(label: String): Int = when (label) {
-    ArabicLabels.STEP_CACHED -> 0
-    ArabicLabels.STEP_CLOUD -> 1
-    ArabicLabels.STEP_LOCAL -> 2
+    ArabicLabels.STEP_LOCAL -> 0
+    ArabicLabels.STEP_CACHED -> 1
+    ArabicLabels.STEP_CLOUD -> 2
     else -> -1
 }
 
@@ -121,7 +121,7 @@ fun DiscoveryScreen(
                         when (target) {
                             is DiscoveryState.Idle -> IdleContent()
                             is DiscoveryState.Discovering -> DiscoveringContent(target)
-                            is DiscoveryState.Connected -> ConnectedContent(onOpenBoard, onRetry)
+                            is DiscoveryState.Connected -> ConnectedContent(target, onOpenBoard, onRetry)
                             is DiscoveryState.Failed -> FailureContent(target, onRetry)
                         }
                     }
@@ -231,9 +231,23 @@ private fun DiscoveringContent(state: DiscoveryState.Discovering) {
 
 @Composable
 private fun ConnectedContent(
+    state: DiscoveryState.Connected,
     onOpenBoard: () -> Unit,
     onRetry: () -> Unit,
 ) {
+    // ── Derive Arabic label + icon for the source ───────────
+    val (sourceLabel, sourceIcon, sourceColor) = when (state.source) {
+        ConnectionSource.LOCAL  -> Triple("الشبكة المحلية", "🏠", Color(0xFF1B5E20))
+        ConnectionSource.CACHED -> Triple("العنوان المحفوظ", "💾", Color(0xFF0D47A1))
+        ConnectionSource.CLOUD  -> Triple("النفق السحابي",  "☁️", Color(0xFF4527A0))
+    }
+
+    // Strip scheme for a cleaner display ("http://192.168.1.50:8000" → "192.168.1.50:8000")
+    val displayUrl = state.boardUrl
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .trimEnd('/')
+
     StatusCard(containerColor = Color(0xFFE8F5E9)) {
         Spacer(Modifier.height(8.dp))
         Box(
@@ -259,6 +273,68 @@ private fun ConnectedContent(
             color = OrabiSuccessGreen.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
         )
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = OrabiSuccessGreen.copy(alpha = 0.15f))
+        Spacer(Modifier.height(14.dp))
+
+        // ── Connection info chip ────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(sourceColor.copy(alpha = 0.08f))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(sourceIcon, fontSize = 20.sp)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "طريقة الاتصال",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OrabiDarkBlue.copy(alpha = 0.5f),
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    sourceLabel,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = sourceColor,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ── Address display ─────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(OrabiDarkBlue.copy(alpha = 0.05f))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("🔗", fontSize = 18.sp)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "عنوان لوحة العدّ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OrabiDarkBlue.copy(alpha = 0.5f),
+                )
+                Spacer(Modifier.height(2.dp))
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        displayUrl,
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                        color = OrabiDarkBlue.copy(alpha = 0.85f),
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(8.dp))
     }
 

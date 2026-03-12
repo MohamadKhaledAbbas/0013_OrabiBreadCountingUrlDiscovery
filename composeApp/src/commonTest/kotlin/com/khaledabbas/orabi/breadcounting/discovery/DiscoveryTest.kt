@@ -48,13 +48,13 @@ class DiscoveryStateTest {
     @Test
     fun discoveringCarriesStepInfo() {
         val state = DiscoveryState.Discovering(
-            stepLabel = ArabicLabels.STEP_CLOUD,
-            stepDetail = "جارٍ جلب عنوان النفق من الخادم السحابي…",
+            stepLabel = ArabicLabels.STEP_CACHED,
+            stepDetail = "جارٍ محاولة الاتصال بالعنوان المحفوظ سابقاً…",
             completedSteps = listOf(
-                StepResult(ArabicLabels.STEP_CACHED, false, "العنوان المحفوظ غير متاح حالياً")
+                StepResult(ArabicLabels.STEP_LOCAL, false, "لم يتم العثور على لوحة العدّ في الشبكة المحلية")
             ),
         )
-        assertEquals(ArabicLabels.STEP_CLOUD, state.stepLabel)
+        assertEquals(ArabicLabels.STEP_CACHED, state.stepLabel)
         assertEquals(1, state.completedSteps.size)
         assertNull(state.localScanProgress)
     }
@@ -72,16 +72,17 @@ class DiscoveryStateTest {
 
     @Test
     fun connectedHoldsBoardUrl() {
-        val state = DiscoveryState.Connected("http://192.168.1.100")
+        val state = DiscoveryState.Connected("http://192.168.1.100", ConnectionSource.LOCAL)
         assertEquals("http://192.168.1.100", state.boardUrl)
+        assertEquals(ConnectionSource.LOCAL, state.source)
     }
 
     @Test
     fun failedContainsAllStepResults() {
         val steps = listOf(
+            StepResult(ArabicLabels.STEP_LOCAL, false, "لم يتم العثور على لوحة العدّ في الشبكة المحلية"),
             StepResult(ArabicLabels.STEP_CACHED, false, "لا يوجد عنوان محفوظ مسبقاً"),
             StepResult(ArabicLabels.STEP_CLOUD, false, "تعذّر الوصول إلى الخادم السحابي"),
-            StepResult(ArabicLabels.STEP_LOCAL, false, "لم يتم العثور على لوحة العدّ في الشبكة المحلية"),
         )
         val state = DiscoveryState.Failed(steps)
         assertEquals(3, state.completedSteps.size)

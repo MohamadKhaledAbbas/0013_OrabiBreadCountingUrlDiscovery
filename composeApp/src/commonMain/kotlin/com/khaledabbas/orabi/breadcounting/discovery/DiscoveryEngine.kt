@@ -12,7 +12,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.TimeSource
 
 /**
- * Core discovery engine that probes the board via cached, cloud, and local strategies.
+ * Core discovery engine that probes the board via local, cached, and cloud strategies.
  *
  * All public methods are suspend functions designed to be called from a coroutine scope.
  */
