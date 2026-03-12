@@ -1,15 +1,64 @@
 package com.khaledabbas.orabi.breadcounting.discovery
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.cancel
 import kotlin.time.TimeSource
+
+// ── Orabi brand M3 colour scheme ─────────────────────────────
+private val OrabiGold = Color(0xFFD4AF37)
+private val OrabiDarkBrown = Color(0xFF5A4A2C)
+private val OrabiCream = Color(0xFFF5EDDC)
+private val OrabiLightGold = Color(0xFFF5E6B8)
+private val OrabiErrorRed = Color(0xFFC62828)
+
+private val OrabiColorScheme = lightColorScheme(
+    primary = OrabiGold,
+    onPrimary = Color.White,
+    primaryContainer = OrabiLightGold,
+    onPrimaryContainer = OrabiDarkBrown,
+    secondary = OrabiDarkBrown,
+    onSecondary = Color.White,
+    secondaryContainer = OrabiCream,
+    onSecondaryContainer = OrabiDarkBrown,
+    background = OrabiCream,
+    onBackground = OrabiDarkBrown,
+    surface = OrabiCream,
+    onSurface = OrabiDarkBrown,
+    surfaceVariant = Color.White,
+    onSurfaceVariant = OrabiDarkBrown.copy(alpha = 0.7f),
+    error = OrabiErrorRed,
+    onError = Color.White,
+    outline = OrabiDarkBrown.copy(alpha = 0.2f),
+)
 
 // Arabic step labels (shared between App flow and tests)
 internal object ArabicLabels {
@@ -18,10 +67,12 @@ internal object ArabicLabels {
     const val STEP_LOCAL = "البحث في الشبكة المحلية"
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    MaterialTheme {
+    MaterialTheme(colorScheme = OrabiColorScheme) {
         var discoveryState by remember { mutableStateOf<DiscoveryState>(DiscoveryState.Idle) }
+        var showWebView by remember { mutableStateOf(false) }
         var runCounter by remember { mutableStateOf(0) }
         var activeRunId by remember { mutableStateOf(0) }
         var activeDiscoveryJob by remember { mutableStateOf<Job?>(null) }
@@ -39,7 +90,8 @@ fun App() {
          * Always starts from the beginning on every call (including retries).
          */
         fun runDiscovery(trigger: String) {
-            activeDiscoveryJob?.cancel("Superseded by new discovery run")
+            showWebView = false
+            activeDiscoveryJob?.cancel(CancellationException("Superseded by new discovery run"))
 
             runCounter += 1
             val runId = runCounter
@@ -200,6 +252,13 @@ fun App() {
             }
         }
 
+        // Auto-show WebView as soon as discovery connects
+        LaunchedEffect(discoveryState) {
+            if (discoveryState is DiscoveryState.Connected) {
+                showWebView = true
+            }
+        }
+
         // Kick off discovery on first composition
         LaunchedEffect(Unit) {
             runDiscovery(trigger = "first_composition")
@@ -208,26 +267,61 @@ fun App() {
         // Dispose engine when leaving composition
         DisposableEffect(Unit) {
             onDispose {
-                activeDiscoveryJob?.cancel("App disposed")
+                activeDiscoveryJob?.cancel(CancellationException("App disposed"))
                 trace(activeRunId, "dispose", "closing_discovery_engine=true")
                 engine.close()
             }
         }
 
         // ── Render ───────────────────────────────────────────
-        when (val s = discoveryState) {
-            is DiscoveryState.Connected -> {
-                BoardWebView(
-                    url = s.boardUrl,
-                    modifier = Modifier.fillMaxSize(),
-                )
+        val currentState = discoveryState
+        if (showWebView && currentState is DiscoveryState.Connected) {
+            // Intercept system back → return to discovery screen
+            PlatformBackHandler {
+                trace(activeRunId, "back_from_webview", "url=${currentState.boardUrl}")
+                showWebView = false
             }
-            else -> {
-                DiscoveryScreen(
-                    state = discoveryState,
-                    onRetry = { runDiscovery(trigger = "user_retry") },
-                )
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    "لوحة العدّ",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = { showWebView = false }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "رجوع",
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        )
+                    },
+                ) { padding ->
+                    BoardWebView(
+                        url = currentState.boardUrl,
+                        modifier = Modifier
+                            .padding(padding)
+                            .fillMaxSize(),
+                    )
+                }
             }
+        } else {
+            DiscoveryScreen(
+                state = discoveryState,
+                onRetry = { runDiscovery(trigger = "user_retry") },
+                onOpenBoard = { showWebView = true },
+            )
         }
     }
 }

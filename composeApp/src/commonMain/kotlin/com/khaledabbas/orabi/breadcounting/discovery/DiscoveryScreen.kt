@@ -10,6 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,6 +69,7 @@ private fun phaseIndex(label: String): Int = when (label) {
 fun DiscoveryScreen(
     state: DiscoveryState,
     onRetry: () -> Unit,
+    onOpenBoard: () -> Unit = {},
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Surface(
@@ -117,7 +122,7 @@ fun DiscoveryScreen(
                         when (target) {
                             is DiscoveryState.Idle -> IdleContent()
                             is DiscoveryState.Discovering -> DiscoveringContent(target)
-                            is DiscoveryState.Connected -> ConnectedContent()
+                            is DiscoveryState.Connected -> ConnectedContent(onOpenBoard, onRetry)
                             is DiscoveryState.Failed -> FailureContent(target, onRetry)
                         }
                     }
@@ -226,7 +231,10 @@ private fun DiscoveringContent(state: DiscoveryState.Discovering) {
 // ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun ConnectedContent() {
+private fun ConnectedContent(
+    onOpenBoard: () -> Unit,
+    onRetry: () -> Unit,
+) {
     StatusCard(containerColor = Color(0xFFE8F5E9)) {
         Spacer(Modifier.height(8.dp))
         Box(
@@ -247,21 +255,54 @@ private fun ConnectedContent() {
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "جارٍ تحميل واجهة لوحة العدّ…",
+            "لوحة العدّ جاهزة للاستخدام",
             style = MaterialTheme.typography.bodySmall,
             color = OrabiSuccessGreen.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(12.dp))
-        LinearProgressIndicator(
-            modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp)),
-            color = OrabiSuccessGreen,
-            trackColor = OrabiSuccessGreen.copy(alpha = 0.15f),
-        )
         Spacer(Modifier.height(8.dp))
+    }
+
+    Spacer(Modifier.height(20.dp))
+
+    Button(
+        onClick = onOpenBoard,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .shadow(6.dp, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = OrabiGold),
+    ) {
+        Text(
+            "فتح لوحة العدّ",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color.White,
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    OutlinedButton(
+        onClick = onRetry,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = OrabiDarkBrown,
+        ),
+    ) {
+        Text(
+            "↻",
+            fontSize = 16.sp,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "إعادة البحث",
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+        )
     }
 }
 
@@ -351,6 +392,8 @@ private fun FailureContent(
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = OrabiGold),
     ) {
+        Text("↻", fontSize = 18.sp, color = Color.White)
+        Spacer(Modifier.width(8.dp))
         Text(
             "إعادة المحاولة",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -609,11 +652,11 @@ private fun FailedStepRow(step: StepResult) {
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                if (step.success) "✓" else "✕",
-                fontSize = 11.sp,
-                color = if (step.success) Color.White else OrabiErrorRed,
-                fontWeight = FontWeight.Bold,
+            Icon(
+                if (step.success) Icons.Default.Check else Icons.Default.Close,
+                contentDescription = null,
+                tint = if (step.success) Color.White else OrabiErrorRed,
+                modifier = Modifier.size(13.dp),
             )
         }
         Spacer(Modifier.width(10.dp))
