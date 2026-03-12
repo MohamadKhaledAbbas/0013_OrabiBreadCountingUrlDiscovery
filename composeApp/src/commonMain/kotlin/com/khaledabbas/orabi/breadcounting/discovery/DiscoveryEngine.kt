@@ -9,6 +9,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 /**
  * Core discovery engine that probes the board via cached, cloud, and local strategies.
@@ -42,14 +43,31 @@ class DiscoveryEngine {
      * Returns the tunnel URL string or null on failure.
      */
     suspend fun fetchTunnelUrl(cloudBaseUrl: String): String? {
+        val requestUrl = "${cloudBaseUrl.trimEnd('/')}/current"
+        val startedAt = TimeSource.Monotonic.markNow()
+
         return try {
-            val response: HttpResponse = cloudClient.get("$cloudBaseUrl/current")
+            println("[DiscoveryEngine] cloud_fetch_start | url=$requestUrl")
+            val response: HttpResponse = cloudClient.get(requestUrl)
+            val elapsedMs = startedAt.elapsedNow().inWholeMilliseconds
+
             if (response.status == HttpStatusCode.OK) {
                 val body = response.bodyAsText()
+                println("[DiscoveryEngine] cloud_fetch_response | status=${response.status.value}, elapsedMs=$elapsedMs, bodyLength=${body.length}")
+
                 val tunnel = json.decodeFromString<TunnelResponse>(body)
-                tunnel.tunnelUrl.takeIf { it.isNotBlank() }
-            } else null
-        } catch (_: Exception) {
+                val result = tunnel.tunnelUrl.takeIf { it.isNotBlank() }
+                if (result == null) {
+                    println("[DiscoveryEngine] cloud_fetch_parse | empty_tunnel_url=true")
+                }
+                result
+            } else {
+                println("[DiscoveryEngine] cloud_fetch_non_200 | status=${response.status.value}, elapsedMs=$elapsedMs")
+                null
+            }
+        } catch (t: Throwable) {
+            val elapsedMs = startedAt.elapsedNow().inWholeMilliseconds
+            println("[DiscoveryEngine] cloud_fetch_exception | elapsedMs=$elapsedMs, type=${t::class.simpleName ?: "Unknown"}, message=${t.message ?: "none"}")
             null
         }
     }
@@ -61,7 +79,8 @@ class DiscoveryEngine {
         return try {
             val response = cloudClient.get("$url/whoami")
             response.status == HttpStatusCode.OK
-        } catch (_: Exception) {
+        } catch (t: Throwable) {
+            println("[DiscoveryEngine] verify_board_exception | url=$url, type=${t::class.simpleName ?: "Unknown"}, message=${t.message ?: "none"}")
             false
         }
     }
