@@ -13,19 +13,11 @@
     Compatible with PowerShell 5.1+ (Windows built-in). No external dependencies.
 
 .NOTES
-    Double-click / "Run with PowerShell" friendly – re-launches in a visible
-    console window so the user can read the output, and pauses before exit.
+    Launch by double-clicking OrabiBreadCountingDiscovery.cmd (recommended).
+    The .cmd file calls PowerShell with -ExecutionPolicy Bypass so the script
+    runs on any Windows machine without additional configuration.
+    The console window stays open after completion so the user can read the output.
 #>
-
-# ── Re-launch in a visible window when run by double-click ───────────────────
-# $Host.Name is 'ConsoleHost' only when running in a real console.
-# When double-clicked, PowerShell spawns a hidden window; we detect that and
-# reopen the script in a visible cmd-style PowerShell window.
-if ($Host.Name -ne 'ConsoleHost') {
-    $args = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    Start-Process powershell.exe -ArgumentList $args
-    exit
-}
 
 # ── UTF-8 output so Arabic renders correctly in the console ──────────────────
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
